@@ -15,5 +15,5 @@ o = numel(optimizers); % or whichever you want to visualize
 %plot_final_mse(mse_all, optimizers);
 
 visualize_weight_animation(weights_log, x_test_log);
-visualize_weight_static(weights_log, x_test_log);
+%visualize_weight_static(weights_log, x_test_log);
 %visualize_weight_evolution(weights_log, x_test_log);

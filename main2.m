@@ -50,6 +50,8 @@ latent_size_user = 200;
 enc_h1_size = 200; 
 dec_h1_size = 200; 
 
+
+
 % Take a subset of delta as training set (e.g., first 384 samples of delta)
 % Ensure delta has enough rows. After diff, delta has size(raw,1)-1 rows.
 num_train_samples_to_take = 384;
@@ -166,7 +168,7 @@ function [grad_We1, grad_be1, grad_We_latent, grad_be_latent, grad_Wd1, grad_bd1
     grad_be1 = delta_H1_enc_layer;
 end
 
-% --- Optimization Method Selection ---
+%% --- Optimization Method Selection ---
 % Choose one of: 'sgd', 'momentum', 'adagrad', 'adam'
 optimization_method = 'adam';
 
@@ -216,7 +218,8 @@ v_Wd_output_adam = zeros(size(Wd_output));
 m_bd_output_adam = zeros(size(bd_output));
 v_bd_output_adam = zeros(size(bd_output));
 
-% --- 2. Training Loop ---
+
+%% --- 2. Training Loop ---
 fprintf('Starting training with %s optimizer for %d epochs...\n', optimization_method, num_epochs);
 loss_history = zeros(num_epochs, 1);
 t = 0;  % Time step counter for Adam
@@ -348,6 +351,7 @@ for epoch = 1:num_epochs
     if mod(epoch, 10) == 0 || epoch == 1 || epoch == num_epochs
         fprintf('Epoch %d/%d, Average Loss: %f\n', epoch, num_epochs, loss_history(epoch));
     end
+
 end
 fprintf('Training finished using %s optimizer.\n\n', optimization_method);
 

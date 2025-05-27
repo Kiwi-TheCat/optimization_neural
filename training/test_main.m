@@ -23,7 +23,7 @@ X_train = (X_train_original - mean_X) ./ std_X;
 input_size = size(X_train, 2);
 hidden_size = 200;
 latent_size = 200;
-num_epochs = 10;
+num_epochs = 50;
 learning_rate = 0.0002;
 optimizers = {'sgd', 'adagrad', 'adam'};
 
