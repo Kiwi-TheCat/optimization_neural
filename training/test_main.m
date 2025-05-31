@@ -25,7 +25,8 @@ hidden_size = 200;
 latent_size = 200;
 num_epochs = 50;
 learning_rate = 0.0002;
-optimizers = {'sgd', 'adagrad', 'adam'};
+%optimizers = {'sgd', 'adagrad', 'adam'};
+optimizers = {'adam'};
 
 %% Store comparison results
 weights_log = struct();
@@ -47,7 +48,7 @@ for o = 1:numel(optimizers)
     weights_log(o).epoch = tmp_log.epoch;
     loss_all(:, o) = loss_history;
 end
-save('loss_all_log.mat', 'loss_all', 'mse_all');
-save('weights_log_tensor.mat', 'weights_log', 'x_test_log');
+save('loss_all_log_2.mat', 'loss_all', 'mse_all');
+save('weights_log_tensor_2.mat', 'weights_log', 'x_test_log');
 
 

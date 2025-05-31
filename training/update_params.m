@@ -1,6 +1,8 @@
 function [params, optim] = update_params(params, grads, optim, lr, method, t)
     beta1 = 0.9; beta2 = 0.999; eps = 1e-8;
     fields = fieldnames(params);
+    % fields = {'We1'}, {'be1'}, {'We_latent'}, {'be_latent'}, {'Wd1'}, {'bd1'}, {'Wd_output'}, {'bd_output'}
+
     for i = 1:numel(fields)
         key = fields{i};
         g = grads.(key);
@@ -11,11 +13,15 @@ function [params, optim] = update_params(params, grads, optim, lr, method, t)
                 optim.cache.(key) = optim.cache.(key) + g.^2;
                 params.(key) = params.(key) - lr * g ./ (sqrt(optim.cache.(key)) + eps);
             case 'adam'
+                % m = first moment estimate (exponential moving average of the gradients)
+                % v = second moment estimate (exponential moving average of the squared gradients)
                 optim.m.(key) = beta1 * optim.m.(key) + (1 - beta1) * g;
                 optim.v.(key) = beta2 * optim.v.(key) + (1 - beta2) * (g.^2);
                 m_hat = optim.m.(key) / (1 - beta1^t);
                 v_hat = optim.v.(key) / (1 - beta2^t);
                 params.(key) = params.(key) - lr * m_hat ./ (sqrt(v_hat) + eps);
+
+                
         end
     end
 end

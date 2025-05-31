@@ -8,7 +8,7 @@ function [loss_history, weight_log, final_mse, x_test_log_out] = ...
     progressBar = waitbar(0, 'Training...', 'WindowStyle', 'normal');
 
     x_test_log_out = cell(num_epochs, 1);  % Log reconstructions
-
+    
     % Initialize weight_log on first use
     weight_log.optimizer = optimizer_type;
     weight_log.epoch = [];  % will be filled later with matching struct
@@ -25,7 +25,7 @@ function [loss_history, weight_log, final_mse, x_test_log_out] = ...
             x = X_train(i, :);
             [loss, grads, x_hat] = forward_backward_pass(x, params, relu, relu_deriv);
             total_loss = total_loss + loss;
-            [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type, t);
+            [params, optim] = update_params_fixed_weights(params, grads, optim, learning_rate, optimizer_type, t);
         end
 
         loss_history(epoch) = total_loss / num_samples;
