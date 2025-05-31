@@ -34,7 +34,7 @@ mse_all = zeros(1, numel(optimizers));
 x_train_log = cell(num_epochs, numel(optimizers));
 x_test_log = cell(num_epochs, numel(optimizers));
 
-for o = 1:numel(optimizers)
+for o = 3
     optimizer_type = optimizers{o};
     fprintf('Training with %s optimizer...\n', optimizer_type);
 
