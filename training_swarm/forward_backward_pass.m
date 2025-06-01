@@ -5,7 +5,7 @@ function [loss, grads, x_hat] = forward_backward_pass(x, params, relu, relu_deri
     h2 = relu(z * params.Wd1 + params.bd1);
     x_hat = h2 * params.Wd_output + params.bd_output;
 
-    % === Loss ===
+    % === Reconstruction Loss ===
     loss = 0.5 * sum((x_hat - x).^2);
 
     % === Forward-only mode ===

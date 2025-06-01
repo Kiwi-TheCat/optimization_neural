@@ -49,7 +49,7 @@ function plot_particle_swarm_video(particle_history, g_best_history, x_test_log_
         hold off;
         title(sprintf('Particle Positions - Epoch %d', epoch));
         xlabel('Parameter Index'); ylabel('Value');
-        xlim([1, dim]); ylim([-1.5, 1.5]); grid on; box on;
+        xlim([1, dim]); ylim([-0.5, 0.5]); grid on; box on;
 
         % --- 2: Particle deltas ---
         nexttile(t, 2);

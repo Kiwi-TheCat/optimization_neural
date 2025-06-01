@@ -1,8 +1,8 @@
 % Simplified Autoencoder Training with Modular Optimizer Support
 % Minimal Autoencoder Architecture: 4 Layers
 % Encoder (2 layers):
-% Input layer — raw input (e.g., 784 for a 28×28 image)
-% Hidden layer — compressed latent representation (e.g., 32 or 10 units)
+% Input layer — raw input (e.g., 121’104 for a 384×384 image)
+% Hidden layer — compressed representation (e.g., 200 or 300 units)
 % 
 % Decoder (2 layers):
 % Hidden layer — expands back from latent space
@@ -22,7 +22,7 @@ raw = data(1:n*chunk_size, 1:n_channel);
 delta = diff(raw);
 
 %% Select training data
-num_train_samples = 384;
+num_train_samples = 1; %384
 X_train_original = double(delta(1:num_train_samples, :));
 
 %% Z-score normalization
@@ -35,7 +35,7 @@ X_train = (X_train_original - mean_X) ./ std_X;
 input_size = size(X_train, 2);
 hidden_size = 200;
 latent_size = 200;
-num_epochs = 300;
+num_epochs = 200;
 learning_rate = 0.0002;
 optimizers = {'PSO', 'PSO', 'PSO', 'PSO', 'PSO'};
 

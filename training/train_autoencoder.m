@@ -1,66 +1,67 @@
-function [loss_history, weight_log, final_mse, x_test_log_out] = ...
-    train_autoencoder(X_train, X_train_original, mean_X, std_X, ...
-    params, optim, relu, relu_deriv, optimizer_type, learning_rate, num_epochs, o)
+function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_train, params, optim, relu, relu_deriv, optimizer_type, learning_rate, num_epochs, o)
+    %TRAIN_AUTOENCODER Trains a shallow autoencoder using the given optimizer and training data.
+    %
+    %   Trains an autoencoder on normalized input data using gradient-based updates.
+    %   The function supports flexible activation functions (relu and leaky_relu) and optimization algorithms.
+    %
+    %   Inputs:
+    %       X_train         - (N x D) matrix of input samples (N samples, D features)
+    %       params          - struct containing all network weights and biases
+    %       optim           - struct containing optimizer state (e.g., Adam moments)
+    %       relu            - function handle for the activation function
+    %       relu_deriv      - function handle for the derivative of the activation function
+    %       optimizer_type  - string, one of {'sgd', 'adagrad', 'adam'}
+    %       learning_rate   - scalar learning rate
+    %       num_epochs      - number of training epochs
+    %       o               - index of optimizer (used for visualization/logging)
+    %
+    %   Outputs:
+    %       loss_history    - (num_epochs x 1) vector containing average loss per epoch
+    %       weight_log      - struct containing snapshots of network weights over time
+    %
+    %   Notes:
+    %       - The function stores snapshots of weights every 10 epochs in `weight_log`.
+    %       - A waitbar is shown during training for progress indication.
+    %       - Optionally calls `live_training_plot(...)` for visualizing reconstruction.
 
-    num_samples = size(X_train, 1);
-    loss_history = zeros(num_epochs, 1);
-    t = 0;
-    progressBar = waitbar(0, 'Training...', 'WindowStyle', 'normal');
 
-    x_test_log_out = cell(num_epochs, 1);  % Log reconstructions
-    
     % Initialize weight_log on first use
     weight_log.optimizer = optimizer_type;
     weight_log.epoch = [];  % will be filled later with matching struct
+    loss_history = zeros(num_epochs, 1);
+    num_samples = size(X_train, 1); % samples in one batch
+    progressBar = waitbar(0, 'Training...', 'WindowStyle', 'normal');
 
+    
     for epoch = 1:num_epochs
         msg = sprintf('Training with %s (Epoch %d/%d)', upper(optimizer_type), epoch, num_epochs);
         waitbar(epoch / num_epochs, progressBar, msg);
-        X_train = X_train(randperm(num_samples), :);
-        total_loss = 0;
+        X_train_shuffled = X_train(randperm(num_samples), :);
+        total_batch_loss = 0;
 
         % --- Training loop ---
         for i = 1:num_samples
-            t = t + 1;
-            x = X_train(i, :);
-            [loss, grads, x_hat] = forward_backward_pass(x, params, relu, relu_deriv);
-            total_loss = total_loss + loss;
-            [params, optim] = update_params_fixed_weights(params, grads, optim, learning_rate, optimizer_type, t);
+            x = X_train_shuffled(i, :);
+            [loss, grads, ~] = forward_backward_pass(x, params, relu, relu_deriv); % the loss function, returns: gradients
+            total_batch_loss = total_batch_loss + loss;
+            [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type,i);
         end
-
-        loss_history(epoch) = total_loss / num_samples;
-
-        % --- Test one reconstruction ---
-        x_test_sample = X_train_original(1,:);
-        x_norm = (x_test_sample - mean_X) ./ std_X;
-        h1 = relu(x_norm * params.We1 + params.be1);
-        z = relu(h1 * params.We_latent + params.be_latent);
+        loss_history(epoch) = total_batch_loss / num_samples;
 
         % Save only every 10th epoch
         if mod(epoch, 10) == 0
-            snapshot = save_epoch_weights(params, z);
+            snapshot = save_epoch_weights(params);
             snapshot.epoch = epoch;
-
             if isempty(weight_log.epoch)
                 weight_log.epoch = snapshot;  % first assignment defines struct fields
             else
                 weight_log.epoch(end+1) = snapshot;  % safe append
             end
         end
-
-        % --- Final decoding for visualization ---
-        h2 = relu(z * params.Wd1 + params.bd1);
-        x_hat = h2 * params.Wd_output + params.bd_output;
-        x_hat = x_hat .* std_X + mean_X;
-        x_test_log_out{epoch} = [x_test_sample; x_hat];
-
-        % Optional live plot if snapshot exists
-        if exist('weight_log', 'var') && isfield(weight_log, 'epoch') && ~isempty(weight_log.epoch)
-            live_training_plot(params, weight_log, X_train_original, mean_X, std_X, optimizer_type, epoch);
-        end
+        
+        % Optional live plot
+        live_training_plot(X_train, params, epoch, relu); % takes the x_hat from last forward_backward_pass
+        
     end
-
-    % Compute final MSE
-    final_mse = compute_reconstruction_mse(params, X_train_original, mean_X, std_X, relu);
     close(progressBar);
 end

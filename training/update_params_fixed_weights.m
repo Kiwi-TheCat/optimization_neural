@@ -1,4 +1,4 @@
-function [params, optim] = update_params(params, grads, optim, lr, method, t)
+function [params, optim] = update_params_fixed_weights(params, grads, optim, lr, method)
     beta1 = 0.9; beta2 = 0.999; eps = 1e-8;
     fields = fieldnames(params);
     % fields = {'We1'      }
@@ -15,15 +15,17 @@ function [params, optim] = update_params(params, grads, optim, lr, method, t)
         g = grads.(key);
         
         rng(42);  % for reproducibility
-        num_updates = 200;
-        total_elements = numel(g);  % Total number of scalar elements in g
-        update_indices = randperm(total_elements, num_updates);  % 200 unique linear indices
+        num_updates = 200; % used for masking
+        total_elements = numel(g);  % Total number of scalar elements in gradients
+        update_indices = randperm(total_elements, num_updates);  % 200 unique masking indices
         switch method
             case 'sgd'
-                params.(key) = params.(key) - lr * g;
+                full_update = lr * g;
             case 'adagrad'
                 optim.cache.(key) = optim.cache.(key) + g.^2;
-                params.(key) = params.(key) - lr * g ./ (sqrt(optim.cache.(key)) + eps);
+                % Full update for all entries
+                full_update = lr * g ./ (sqrt(optim.cache.(key)) + eps);
+
             case 'adam' % fixed weights only for the adam algorithm
                 % m = first moment estimate (exponential moving average of the gradients)
                 % v = second moment estimate (exponential moving average of the squared gradients)
@@ -38,12 +40,12 @@ function [params, optim] = update_params(params, grads, optim, lr, method, t)
                 % Full update for all entries
                 full_update = lr * m_hat ./ (sqrt(v_hat) + eps);
                 
-                % Masked update — only apply to selected indices
-                masked_update = zeros(size(params.(key)));
-                masked_update(update_indices) = full_update(update_indices);
-                
-                % Final parameter update
-                params.(key) = params.(key) - masked_update;
         end
+        % Masked update — only apply to selected indices
+        masked_update = zeros(size(params.(key)));
+        masked_update(update_indices) = full_update(update_indices);
+                
+        % Final parameter update
+        params.(key) = params.(key) - masked_update;
     end
 end

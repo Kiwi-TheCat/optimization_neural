@@ -21,7 +21,6 @@ function [params, optim] = update_params(params, grads, optim, lr, method, t)
                 v_hat = optim.v.(key) / (1 - beta2^t);
                 params.(key) = params.(key) - lr * m_hat ./ (sqrt(v_hat) + eps);
 
-                
         end
     end
 end
