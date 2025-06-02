@@ -12,7 +12,7 @@ num_epochs = 20;
 learning_rate = 0.0002; % should be low for stochastic gradient descend
 regularization_lambda = 0; % determines L2 regularization lambda
 alpha_leaky = 0.1; % determines leakiness for leaky_relu
-batch_descend = 0; 
+batch_descend = 1; 
 % true makes the optim update once per batch (more generalized), 
 % false once per sample (sgd is always sample wise)
 optimizers = {'sgd', 'adagrad', 'adam'};
@@ -30,7 +30,7 @@ for o = 1:numel(optimizers)
     [params, optim, relu, leaky_relu, relu_deriv, leaky_relu_deriv] = setup_network(input_size, hidden_size, latent_size, alpha_leaky); 
 
     [loss_history, tmp_log, final_loss(o)] = train_autoencoder(X_train, params, optim, leaky_relu, leaky_relu_deriv,...
-        optimizer_type, learning_rate, num_epochs, o, regularization_lambda, batch_descend); 
+        optimizer_type, learning_rate, num_epochs, regularization_lambda, batch_descend); 
     % replace relu with leaky_relu and relu_deriv with leaky_relu_deriv for comparison
     
     weights_log(o).optimizer = tmp_log.optimizer;

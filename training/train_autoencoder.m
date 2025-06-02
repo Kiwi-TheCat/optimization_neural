@@ -1,5 +1,5 @@
 function [loss_history, weight_log, total_avg_loss] = train_autoencoder(X_train, params, optim, relu, relu_deriv,...
-    optimizer_type, learning_rate, num_epochs, o, regularization_lambda, batch_descend)
+    optimizer_type, learning_rate, num_epochs, regularization_lambda, batch_descend, lastStr)
     %TRAIN_AUTOENCODER Trains a shallow autoencoder using the given optimizer and training data.
     %
     %   Trains an autoencoder on normalized input data using gradient-based updates.
@@ -14,7 +14,6 @@ function [loss_history, weight_log, total_avg_loss] = train_autoencoder(X_train,
     %       optimizer_type  - string, one of {'sgd', 'adagrad', 'adam'}
     %       learning_rate   - scalar learning rate
     %       num_epochs      - number of training epochs
-    %       o               - index of optimizer (used for visualization/logging)
     %
     %   Outputs:
     %       loss_history    - (num_epochs x 1) vector containing average loss per epoch
@@ -31,14 +30,29 @@ function [loss_history, weight_log, total_avg_loss] = train_autoencoder(X_train,
     weight_log.epoch = [];  % will be filled later with matching struct
     loss_history = zeros(num_epochs, 1);
     num_samples = size(X_train, 1); % samples in one batch
-    progressBar = waitbar(0, 'Training...', 'WindowStyle', 'normal');
+   % progressBar = waitbar(0, 'Training...', 'WindowStyle', 'normal');
+    if nargin < 12 || isempty(lastStr)
+        lastStr = '';
+    end
+    
+    % data = 30'000x385
+    % batch_size = 300
+    % evaluations = 30'000/300 = 10 -> 8 evaluations for the training
+    % train/test = 20/80
+    for epoch = 1:num_epochs % normally iterates over all the batches and 
+        str = sprintf('Training: Epoch %d/%d with optimizer %s', epoch, num_epochs, optimizer_type);
+        % Erase previous message using backspaces
+        fprintf(repmat('\b', 1, length(lastStr)));
+        
+        % Print the new message
+        fprintf('%s', str);
+        
+        % Store current message
+        lastStr = str;
 
-    for epoch = 1:num_epochs
-        msg = sprintf('Training with %s (Epoch %d/%d)', upper(optimizer_type), epoch, num_epochs);
-        waitbar(epoch / num_epochs, progressBar, msg);
         total_batch_loss = 0;
         % --- Training ---
-        if batch_descend
+        if batch_descend % one batch 384 samples 
             [total_avg_loss, grads, ~] = forward_backward_pass(X_train, params, relu, relu_deriv); % the loss function, returns: gradients
             [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type, epoch, regularization_lambda);
             loss_history(epoch) = total_avg_loss;
@@ -73,5 +87,5 @@ function [loss_history, weight_log, total_avg_loss] = train_autoencoder(X_train,
     if ~batch_descend
         total_avg_loss = total_batch_loss / num_samples;
     end
-    close(progressBar);
+    fprintf('\n');
 end
