@@ -1,5 +1,5 @@
 clear;clc;
-load('data_1s.mat')
+load('./training/data_1s.mat')
 
 n = 10; % number of chunks
 chunk_size = 384; % number of samples in a chunk
