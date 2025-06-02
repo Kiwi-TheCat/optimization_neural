@@ -39,8 +39,8 @@ function [loss_history_after_each_update,loss_history_per_epoch, weight_log, tot
     % evaluations = 30'000/300 = 10 -> 8 evaluations for the training
     % train/test = 20/80
     num_batches = ceil(num_samples / batch_size);
-    loss_history_after_each_update = zeros(num_epochs*num_batches, 1);
-    loss_history_per_epoch = zeros(num_epochs, 1);
+    loss_history_after_each_update = nan(num_epochs*num_batches, 1);
+    loss_history_per_epoch = nan(num_epochs, 1);
     for epoch = 1:num_epochs % normally iterates over all the batches and 
         str = sprintf('Training: Epoch %d/%d with optimizer %s', epoch, num_epochs, optimizer_type);
         % Erase previous message using backspaces
@@ -63,7 +63,10 @@ function [loss_history_after_each_update,loss_history_per_epoch, weight_log, tot
 
             if batch_descend
                 [batch_loss, grads, ~] = forward_backward_pass(X_batch, params, relu, relu_deriv);
-                [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type, epoch, regularization_lambda);
+                % non fixed weights
+                %[params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type, epoch, regularization_lambda);
+                % fixed weights (only 200 are updated)
+                [params, optim] = update_params_fixed_weights(params, grads, optim, learning_rate, optimizer_type, epoch, regularization_lambda);
                 total_batch_loss = total_batch_loss + batch_loss;
             else
                 % sample-wise
@@ -95,8 +98,9 @@ function [loss_history_after_each_update,loss_history_per_epoch, weight_log, tot
 
 
 
-        % Save only every 10th epoch
-        if mod(epoch, 10) == 0
+        % Save only every nth epoch
+        n=1;
+        if mod(epoch, n) == 0
             snapshot = save_epoch_weights(params);
             snapshot.epoch = epoch;
             snapshot.x_test_sample = x_test_sample;
@@ -108,6 +112,12 @@ function [loss_history_after_each_update,loss_history_per_epoch, weight_log, tot
                 weight_log.epoch(end+1) = snapshot;  % safe append
             end
 
+        end
+        % === Early breaking ===
+        if epoch>5 && (abs(loss_history_per_epoch(epoch-1)-loss_history_per_epoch(epoch))<1)
+            total_avg_loss = total_batch_loss / num_batches;
+            fprintf('\n');
+            return;
         end
     end
     total_avg_loss = total_batch_loss / num_batches;

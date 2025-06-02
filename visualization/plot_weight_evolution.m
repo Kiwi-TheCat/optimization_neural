@@ -25,7 +25,7 @@ function plot_weight_evolution(weight_log, field_name, o, update_indices)
     if nargin < 4 || isempty(update_indices)
         changed = any(diff(all_weights, 1, 2) ~= 0, 2);
         update_indices = find(changed);
-        origin = ' (auto-detected)';
+        origin = ' (auto-detected changing weights)';
     else
         origin = ' (from input)';
     end
@@ -37,12 +37,19 @@ function plot_weight_evolution(weight_log, field_name, o, update_indices)
     update_traces = cumsum(delta_traces, 2); % summed signed delta over time
 
     % --- Plot heatmap of weight evolution
-    figure('Name', sprintf('Summed Delta Weight Evolution: %s', field_name));
+    figure('Name', sprintf('CumSum Delta Weight Evolution: %s%s', field_name, origin));
     imagesc(epoch_numbers(2:end), 1:numel(update_indices), update_traces);
     colorbar;
     xlabel('Epoch');
     ylabel('Weight Index');
+    
     optimizer_name = upper(weight_log(o).optimizer);
-    title(sprintf('Summed Δ of %d weights in %s%s [%s]', ...
-    numel(update_indices), field_name, origin, optimizer_name));
+    sanitized_fieldname = strrep(field_name, '_', '-');
+    filename_prefix = ['weights_evolution_', sanitized_fieldname, '_', origin,'_', optimizer_name];
+    
+    title(sprintf('CumSum Δ of %d weights in %s\n%s [%s]', ...
+        numel(update_indices), sanitized_fieldname, origin, optimizer_name));
+    
+    saveas(gcf, [filename_prefix, '_optimizer', num2str(i), '.png']);
+
 end

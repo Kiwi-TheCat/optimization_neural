@@ -1,12 +1,14 @@
 % Load from one folder above the current directory
-load('../training/weights_log_tensor_3.mat');
-load('../training/loss_all_log_3.mat');
-load('../training/preprocessed_full_data.mat', 'X_train', 'X_original', 'mean_X', 'std_X');
+load('../training/weights_log_tensor_leaky.mat');
+load('../training/loss_all_log_leaky.mat');
+load('../training/preprocessed_full_data.mat', 'X', 'X_original', 'mean_X', 'std_X');
 addpath(fullfile('..', 'training'));
 
 % --- Setup ---
-X_val   = X_train(385:770, :);  % validation
-X_train = X_train(1:384, :);    % training
+
+num_samples = size(X,1);
+num_samples_train = ceil(num_samples*0.8);
+X_val = X(num_samples_train:end,:);
 num_optimizers = numel(weights_log);
 
 all_train_loss = cell(num_optimizers, 1);
@@ -16,19 +18,37 @@ mean_losses    = zeros(num_optimizers, 2);  % [train, val]
 [~, ~, relu, ~, ~, ~] = setup_network();  % or leaky_relu if used
 
 % --- Evaluate each optimizer ---
+batch_size = 100;
+
 for o = 1:num_optimizers
-    params = weights_log(o).epoch(end);  % final epoch weights
-    
-    % Compute training losses
-    loss_train = zeros(size(X_train, 1), 1);
-    for i = 1:size(X_train, 1)
-        loss_train(i) = compute_reconstruction_mse(params, X_train(i,:), relu);
+    params = weights_log(o).epoch(end);
+
+    % --- Training loss ---
+    N_train = size(X_train, 1);
+    num_batches_train = ceil(N_train / batch_size);
+    loss_train = zeros(N_train, 1);
+
+    for b = 1:num_batches_train
+        idx_start = (b - 1) * batch_size + 1;
+        idx_end   = min(b * batch_size, N_train);
+        X_batch = X_train(idx_start:idx_end, :);
+
+        batch_mse = compute_reconstruction_mse(params, X_batch, relu);
+        loss_train(idx_start:idx_end) = batch_mse;  % could be scalar or vector
     end
 
-    % Compute validation losses
-    loss_val = zeros(size(X_val, 1), 1);
-    for i = 1:size(X_val, 1)
-        loss_val(i) = compute_reconstruction_mse(params, X_val(i,:), relu);
+    % --- Validation loss ---
+    N_val = size(X_val, 1);
+    num_batches_val = ceil(N_val / batch_size);
+    loss_val = zeros(N_val, 1);
+
+    for b = 1:num_batches_val
+        idx_start = (b - 1) * batch_size + 1;
+        idx_end   = min(b * batch_size, N_val);
+        X_batch = X_val(idx_start:idx_end, :);
+
+        batch_mse = compute_reconstruction_mse(params, X_batch, relu);
+        loss_val(idx_start:idx_end) = batch_mse;
     end
 
     % Store
@@ -36,6 +56,7 @@ for o = 1:num_optimizers
     all_val_loss{o}   = loss_val;
     mean_losses(o, :) = [mean(loss_train), mean(loss_val)];
 end
+
 
 %% --- Boxplot ---
 all_losses = vertcat(all_train_loss{:}, all_val_loss{:});

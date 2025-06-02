@@ -7,7 +7,15 @@ function plot_particle_swarm_video(particle_history, g_best_history, x_train_sel
     end
 
     num_epochs = numel(particle_history);
-    [num_particles, dim] = size(particle_history{1});
+
+    % Early exit if nothing to plot
+    if all(cellfun(@isempty, particle_history)) || num_epochs == 0
+        warning("No particle history to plot.");
+        return;
+    end
+
+    particles = particle_history{find(~cellfun(@isempty, particle_history), 1)};  % Find first valid entry
+    [num_particles, dim] = size(particles);
     downsampled_idx = round(linspace(1, dim, min(300, dim)));
 
     show_recon = nargin > 3 && ~isempty(X_hats);
@@ -24,17 +32,24 @@ function plot_particle_swarm_video(particle_history, g_best_history, x_train_sel
         clf(f);  % Clear figure
         t = tiledlayout(f, 1, 3, 'Padding', 'compact');
 
+        if isempty(particle_history{epoch})
+            continue;
+        end
+
+        particles = particle_history{epoch};
+        [num_particles, dim] = size(particles);
+        cols = downsampled_idx(downsampled_idx <= dim);
+
         % --- 1: Particle positions ---
         nexttile(t, 1);
-        particles = particle_history{epoch};
         hold on;
         h_particles = gobjects(min(num_particles, 20), 1);
         for i = 1:min(num_particles, 20)
-            h_particles(i) = plot(downsampled_idx, particles(i, downsampled_idx), '-', 'LineWidth', 1);
+            h_particles(i) = plot(cols, particles(i, cols), '-', 'LineWidth', 1);
         end
-        
+
         if show_best && size(g_best_history, 1) >= epoch
-            h_best = plot(downsampled_idx, g_best_history(epoch, downsampled_idx), 'k-', 'LineWidth', 2);
+            h_best = plot(cols, g_best_history(epoch, cols), 'k-', 'LineWidth', 2);
             legend([h_particles(1), h_best], {'Particles', 'Global Best'});
         end
 
@@ -45,9 +60,9 @@ function plot_particle_swarm_video(particle_history, g_best_history, x_train_sel
 
         % --- 2: Particle deltas ---
         nexttile(t, 2);
-        if epoch > 1
+        if epoch > 1 && ~isempty(particle_history{epoch-1})
             delta = particles - particle_history{epoch - 1};
-            delta = delta(:, downsampled_idx);
+            delta = delta(:, cols);
             imagesc(delta);
             caxis([-0.05, 0.05]); colorbar;
             xlabel('Parameter Index'); ylabel('Particle #');

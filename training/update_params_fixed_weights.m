@@ -1,4 +1,4 @@
-function [params, optim] = update_params_fixed_weights(params, grads, optim, lr, method, lambda)
+function [params, optim] = update_params_fixed_weights(params, grads, optim, lr, method, t, lambda)
     beta1 = 0.9; beta2 = 0.999; eps = 1e-8;
     fields = fieldnames(params);
     % fields = {'We1'      }
