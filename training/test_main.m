@@ -1,16 +1,16 @@
 % Simplified Autoencoder Training with Modular Optimizer Support
 clear; clc; close all
 % load delta encoded and Z-score normalized data
-load('preprocessed_full_data.mat', 'X_train', 'X_original', 'mean_X', 'std_X');
-num_samples = size(X_train,1);
+load('preprocessed_full_data.mat', 'X', 'X_original', 'mean_X', 'std_X');
+num_samples = size(X,1);
 num_samples_train = ceil(num_samples*0.8);
-X_train = X_train(1:num_samples_train,:);
+X_train = X(1:num_samples_train,:);
 
 % Network architecture
 input_size = size(X_train, 2);
 hidden_size = 200;
 latent_size = 200;
-num_epochs = 20;
+num_epochs = 200;
 learning_rate = 0.0002; % should be low for stochastic gradient descend
 regularization_lambda = 0; % determines L2 regularization lambda
 alpha_leaky = 0.1; % determines leakiness for leaky_relu
@@ -34,13 +34,13 @@ for o = 1:numel(optimizers)
 
     [params, optim, relu, leaky_relu, relu_deriv, leaky_relu_deriv] = setup_network(input_size, hidden_size, latent_size, alpha_leaky); 
 
-    [loss_history, tmp_log, final_loss(o)] = train_autoencoder(X_train, params, optim, leaky_relu, leaky_relu_deriv,...
+    [loss_history_after_each_update, loss_history_per_epoch, tmp_log, final_loss(o)] = train_autoencoder(X_train, params, optim, leaky_relu, leaky_relu_deriv,...
         optimizer_type, learning_rate, num_epochs, regularization_lambda, batch_descend, batch_size); 
     % replace relu with leaky_relu and relu_deriv with leaky_relu_deriv for comparison
     
     weights_log(o).optimizer = tmp_log.optimizer;
     weights_log(o).epoch = tmp_log.epoch;
-    all_loss(:, o) = loss_history; % stores the batch-loss (summed losses over all N training samples)/N
+    all_loss(:, o) = loss_history_after_each_update; % stores the batch-loss (summed losses over all N training samples)/N
 
 end
 save('loss_all_log_leaky.mat', 'all_loss', 'final_loss');

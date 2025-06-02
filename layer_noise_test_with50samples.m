@@ -2,19 +2,27 @@
 % Date: 2nd June 2025
 %% Step 1: Load the best weight matrix of Adam method
 clear; clc;
-load("Adam_weights_and_bias.mat");
+load("./training/weights_log_tensor_leaky.mat");
 load("./training/preprocessed_full_data.mat")
 addpath(fullfile('.', 'training')); % like this the functions from training become usable
+params = weights_log(3).epoch(end);
 
+num_samples = size(X, 1);
+num_samples_test = ceil(num_samples * 0.9);
+
+X_test = X(end - num_samples_test + 1:end, :);
+X_train = X(1:end - num_samples_test, :);
+
+batchsize = 300;
+num_batches = ceil(num_samples_test/batchsize);
 % Access original weights and biases from a specific epoch
-X_train = X_train(1:384, 1:384);  % first 384 samples, all columns(:= full signal)
 original_params = params;
 alpha_leaky = 0.1;
 [~, ~, relu, leaky_relu, ~, ~] = setup_network(0, 0, 0, alpha_leaky); 
 
 %% Step 2: Add noise layer by layer
 % Noise sensitivity setup
-Noise_Levels = [0.001, 0.01, 0.1]; % small noise, moderate noise, large noise
+Noise_Levels = [0.01, 0.1, 0.5]; % small noise, moderate noise, large noise
 Layer_Names = ["We1", "We_latent", "Wd1", "Wd_output"];
 num_samples = 500;
 
@@ -23,7 +31,7 @@ results = table('Size', [0 3], ...
     'VariableTypes', {'string', 'double', 'double'}, ...
     'VariableNames', {'LayerName', 'Noise', 'Loss'});
 
-baseline_loss = compute_reconstruction_mse(original_params, X_train, relu);
+baseline_loss = compute_reconstruction_mse(original_params, X_test, relu);
 
 % Loop through each layer and noise level
 for i = 1:length(Layer_Names)
@@ -42,7 +50,7 @@ for i = 1:length(Layer_Names)
         temp_params.(current_layer) = noisy_W;
 
         % Evaluate the loss using enhanced batch function
-        current_loss = compute_reconstruction_mse(temp_params, X_train, relu);
+        current_loss = compute_reconstruction_mse(temp_params, X_test, relu);
 
         % Append to table
         results = [results; {current_layer, current_noise, current_loss}];
@@ -70,11 +78,12 @@ for i = 1:length(Layer_Names)
         current_noise = Noise_Levels(j);
         W = original_params.(current_layer);
 
-        losses = zeros(1, num_samples);
-        for k = 1:num_samples
+        losses = zeros(1, num_batches);
+        for k=1:num_batches
             temp_params = original_params;
             temp_params.(current_layer) = W + current_noise * randn(size(W));
-            losses(k) = compute_reconstruction_mse(temp_params, X_train, relu);
+            X_batch = X_test((k-1)*batchsize+1 : k*batchsize, :);
+            losses(k) = compute_reconstruction_mse(temp_params, X_batch, relu);
         end
 
         [avg_loss, delta_loss, std_dev, conf_interval] = analyze_losses(losses, baseline_loss, alpha);
@@ -96,7 +105,7 @@ disp(results);
 
 % Define layer and noise info
 Layer_Names  = ["We1", "We_latent", "Wd1", "Wd_output"];
-noise_levels = [0.001, 0.01]; % better for visualization
+noise_levels = Noise_Levels %[0.01, 0.01]; % better for visualization
 
 % Flatten loss_log into Arrays
 all_losses = [];

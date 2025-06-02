@@ -12,8 +12,8 @@ mean_X = mean(X_original);
 std_X = std(X_original);
 std_X(std_X == 0) = 1e-6;  % to avoid division by zero
 
-X_train = (X_original - mean_X) ./ std_X;
+X = (X_original - mean_X) ./ std_X;
 
 % Save for training
 save('preprocessed_full_data.mat', ...
-     'X_train', 'X_original', 'mean_X', 'std_X');
+     'X', 'X_original', 'mean_X', 'std_X');

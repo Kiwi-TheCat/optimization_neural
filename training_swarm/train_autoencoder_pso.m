@@ -23,14 +23,14 @@ function [global_best_loss_history, weight_log, final_mse, p_best_particles_loss
     global_best_loss_history = zeros(num_epochs, 1);
     weight_log.optimizer = optimizer_type;
     weight_log.epoch = cell(num_epochs, 1);
+    lastStr = '';
 
     % === Begin Optimization Loop ===
-    progressBar = waitbar(0, 'Training (PSO)...');
+    % progressBar = waitbar(0, 'Training (PSO)...');
     for epoch = 1:num_epochs
-        if isvalid(progressBar)
-            waitbar(epoch / num_epochs, progressBar, ...
-                sprintf('PSO Epoch %d/%d', epoch, num_epochs));
-        end
+        str = sprintf('Training: Epoch %d/%d with optimizer %s', epoch, num_epochs, optimizer_type);
+        % Erase previous message using backspaces
+        fprintf(repmat('\b', 1, length(lastStr)));
 
         % === Evaluate Fitness for Each Particle ===
         for i = 1:num_particles
@@ -78,4 +78,5 @@ function [global_best_loss_history, weight_log, final_mse, p_best_particles_loss
     X_hats = reconstruction_over_all_epochs(X_train, best_particle_indices, particle_history, unpack, relu);
     plot_particle_swarm_video(particle_history, g_best_vectors, X_train(1,:), X_hats, 'swarm_training.mp4');
     final_mse = compute_reconstruction_mse(params, X_train, relu);
+    fprintf('\n');
 end

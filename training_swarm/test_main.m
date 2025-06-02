@@ -15,8 +15,11 @@ clear; clc; close all
 addpath(fullfile('..', 'training')); % like this the functions from training become usable
 
 % load delta encoded and Z-score normalized data
-load('../training/preprocessed_full_data.mat', 'X_train', 'X_original', 'mean_X', 'std_X');
-X_train = X_train(1:384,:);
+load('../training/preprocessed_full_data.mat', 'X', 'X_original', 'mean_X', 'std_X');
+num_samples = size(X,1);
+num_samples_train = ceil(num_samples*0.8);
+X_train = X(1:num_samples_train,:);
+
 
 %% Network architecture
 input_size = size(X_train, 2);

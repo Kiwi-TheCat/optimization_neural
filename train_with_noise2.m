@@ -3,21 +3,29 @@
 %%
 clear; clc;
 
-% Load data and pre-trained weights
-load("Adam_weights_and_bias.mat");
+load("./training/weights_log_tensor_leaky.mat");
 load("./training/preprocessed_full_data.mat")
 addpath(fullfile('.', 'training')); % like this the functions from training become usable
+params = weights_log(3).epoch(end);
 
-% Access original weights and biases from a specific epoch
-X_train = X_train(1:384, 1:384);  % first 384 samples, all columns(:= full signal)
+num_samples = size(X, 1);
+num_samples_test = ceil(num_samples * 0.5);
 
+X_test = X(end - num_samples_test + 1:end, :);
+X_train = X(1:end - num_samples_test, :);
+
+batch_size = 300;
+num_batches = ceil(num_samples_test/batch_size);
+
+fields = fieldnames(params);
 % Setup Original Parameters
-original_params = params;
-
+for i = 1:8
+    original_params.(fields{i}) = params.(fields{i});
+end
 % Training Configuration
 config = struct(...
     'learning_rate', 0.0002, ...
-    'num_epochs', 100, ...
+    'num_epochs', 10, ...
     'adam_beta1', 0.9, ...
     'adam_beta2', 0.999, ...
     'adam_epsilon', 1e-8);
@@ -64,13 +72,14 @@ for i = 1:length(Layer_Names)
         
         % Evaluate initial damage
         initial_loss = compute_reconstruction_mse(noisy_params, X_train, relu);
-        fprintf('Initial loss: %.6f\n', initial_loss);
-        
+        lastStr = sprintf('Initial loss: %.6f\n', initial_loss);
+        fprintf(lastStr);
+
         % Train to recover
         %[final_params, loss_history] = train_adam(noisy_params, X_train, config, relu, relu_derivative);
 
-        [loss_history, final_params, final_loss] = train_autoencoder(X_train, noisy_params, optim, relu, relu_deriv,...
-        'adam', config.learning_rate, config.num_epochs, regularization_lambda, batch_descend,lastStr);
+        [loss_history_after_each_update, loss_history_per_epoch, final_params, final_loss] = train_autoencoder(X_train, noisy_params, optim, relu, relu_deriv,...
+        'adam', config.learning_rate, config.num_epochs, regularization_lambda, batch_descend, batch_size, lastStr);
         % Evaluate recovery
         %final_loss = compute_reconstruction_mse(final_params, X_train, relu);
         recovery_pct = ((initial_loss - final_loss) / initial_loss) * 100;
@@ -79,7 +88,7 @@ for i = 1:length(Layer_Names)
         fprintf('Recovery: %.2f%%\n', recovery_pct);
         
         % Store results
-        loss_histories{end+1} = loss_history;
+        loss_histories{end+1} = loss_history_per_epoch;
         final_params_all{end+1} = final_params;
         results = [results; {current_layer, current_noise, initial_loss, final_loss}];
     end
@@ -159,6 +168,7 @@ function create_recovery_plots(noisy_results, loss_histories, Layer_Names, Noise
     ylabel('Loss', 'FontSize', 12);
     title('Training Convergence Curves', 'FontSize', 14);
     legend(legend_entries, 'Location', 'best', 'FontSize', 9);
+    xlim([1 inf]);
     grid on;
     set(gca, 'YScale', 'log', 'FontSize', 11);
     
