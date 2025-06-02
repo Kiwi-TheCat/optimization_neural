@@ -2,7 +2,9 @@
 clear; clc; close all
 % load delta encoded and Z-score normalized data
 load('preprocessed_full_data.mat', 'X_train', 'X_original', 'mean_X', 'std_X');
-X_train = X_train(1:384,:);
+num_samples = size(X_train,1);
+num_samples_train = ceil(num_samples*0.8);
+X_train = X_train(1:num_samples_train,:);
 
 % Network architecture
 input_size = size(X_train, 2);
@@ -13,13 +15,16 @@ learning_rate = 0.0002; % should be low for stochastic gradient descend
 regularization_lambda = 0; % determines L2 regularization lambda
 alpha_leaky = 0.1; % determines leakiness for leaky_relu
 batch_descend = 1; 
+batch_size = 300; 
 % true makes the optim update once per batch (more generalized), 
 % false once per sample (sgd is always sample wise)
 optimizers = {'sgd', 'adagrad', 'adam'};
    
 % Store comparison results
 weights_log = struct(); % logs the weights every 10th epoch over all the training epochs
-all_loss = zeros(num_epochs, numel(optimizers));    % logs all the loss curves
+num_batches = ceil(num_samples_train/batch_size);
+num_losses_tracked = num_epochs*num_batches ;
+all_loss = zeros(num_losses_tracked, numel(optimizers));    % logs all the loss curves
 final_loss = zeros(1, numel(optimizers));           % logs all the losses over all the epochs
 x_train_log = cell(num_epochs, numel(optimizers));  % logs all the data that had been trained on
 
@@ -30,7 +35,7 @@ for o = 1:numel(optimizers)
     [params, optim, relu, leaky_relu, relu_deriv, leaky_relu_deriv] = setup_network(input_size, hidden_size, latent_size, alpha_leaky); 
 
     [loss_history, tmp_log, final_loss(o)] = train_autoencoder(X_train, params, optim, leaky_relu, leaky_relu_deriv,...
-        optimizer_type, learning_rate, num_epochs, regularization_lambda, batch_descend); 
+        optimizer_type, learning_rate, num_epochs, regularization_lambda, batch_descend, batch_size); 
     % replace relu with leaky_relu and relu_deriv with leaky_relu_deriv for comparison
     
     weights_log(o).optimizer = tmp_log.optimizer;
@@ -51,7 +56,7 @@ for o = 1:numel(optimizers)
          'LineWidth', 1.5, 'DisplayName', optimizers{o});
 end
 
-xlabel('Epoch');
+xlabel('Epoch*Batch');
 ylabel('Average Batch Loss');
 title('Batch Loss for Different Optimizers over epochs');
 legend('Location', 'northeast');
