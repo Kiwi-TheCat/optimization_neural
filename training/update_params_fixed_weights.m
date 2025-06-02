@@ -1,4 +1,4 @@
-function [params, optim] = update_params_fixed_weights(params, grads, optim, lr, method)
+function [params, optim] = update_params_fixed_weights(params, grads, optim, lr, method, lambda)
     beta1 = 0.9; beta2 = 0.999; eps = 1e-8;
     fields = fieldnames(params);
     % fields = {'We1'      }
@@ -21,10 +21,13 @@ function [params, optim] = update_params_fixed_weights(params, grads, optim, lr,
         switch method
             case 'sgd'
                 full_update = lr * g;
+                full_update = full_update + lambda * params.(key);  % L2 penalty
+
             case 'adagrad'
                 optim.cache.(key) = optim.cache.(key) + g.^2;
                 % Full update for all entries
                 full_update = lr * g ./ (sqrt(optim.cache.(key)) + eps);
+                full_update = full_update + lambda * params.(key);  % L2 penalty
 
             case 'adam' % fixed weights only for the adam algorithm
                 % m = first moment estimate (exponential moving average of the gradients)
@@ -39,7 +42,8 @@ function [params, optim] = update_params_fixed_weights(params, grads, optim, lr,
                 
                 % Full update for all entries
                 full_update = lr * m_hat ./ (sqrt(v_hat) + eps);
-                
+                full_update = full_update + lambda * params.(key);  % L2 penalty
+
         end
         % Masked update — only apply to selected indices
         masked_update = zeros(size(params.(key)));

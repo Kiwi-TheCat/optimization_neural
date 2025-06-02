@@ -10,38 +10,30 @@
 
 % x (input) → [ENCODER] → h (latent) → [DECODER] → x̂ (reconstructed)
 
-
+% Simplified Autoencoder Training with Modular Optimizer Support
 clear; clc; close all
-load('data_1s.mat')
+addpath(fullfile('..', 'training')); % like this the functions from training become usable
 
-%% Parameters
-n = 10;
-chunk_size = 384;
-n_channel = 384;
-raw = data(1:n*chunk_size, 1:n_channel);
-delta = diff(raw);
-
-%% Select training data
-num_train_samples = 1; %384
-X_train_original = double(delta(1:num_train_samples, :));
-
-%% Z-score normalization
-mean_X = mean(X_train_original);
-std_X = std(X_train_original);
-std_X(std_X == 0) = 1e-6;
-X_train = (X_train_original - mean_X) ./ std_X;
+% load delta encoded and Z-score normalized data
+load('../training/preprocessed_full_data.mat', 'X_train', 'X_original', 'mean_X', 'std_X');
+X_train = X_train(1:384,:);
 
 %% Network architecture
 input_size = size(X_train, 2);
 hidden_size = 200;
 latent_size = 200;
-num_epochs = 200;
-learning_rate = 0.0002;
-optimizers = {'PSO', 'PSO', 'PSO', 'PSO', 'PSO'};
+num_epochs = 20;
+optimizers = {'PSO1', 'PSO2', 'PSO3', 'PSO4'};
+pso_params = [];
+% === PSO parameters ===
+pso_params.w = 0.5; % momentum
+pso_params.c1 = 1.5; % cognitive
+pso_params.c2 = 0.3; % social
+num_particles = 30;
 
 %% Store comparison results
 weights_log = struct();
-loss_all = zeros(num_epochs, numel(optimizers));
+all_loss = zeros(num_epochs, numel(optimizers));
 mse_all = zeros(1, numel(optimizers));
 x_train_log = cell(num_epochs, numel(optimizers));
 x_test_log = cell(num_epochs, numel(optimizers));
@@ -53,14 +45,31 @@ for o = 1:numel(optimizers)
 
     [params, optim, relu, relu_deriv] = setup_network(input_size, hidden_size, latent_size);
 
-    [loss_history, tmp_log, mse_all(o), x_test_log(:,o), p_best_loss] = train_autoencoder_pso(X_train, X_train_original, mean_X, std_X, ...
-        params, relu, optimizers{o}, num_epochs, o);
+    [loss_history, tmp_log, mse_all(o), p_best_loss] = train_autoencoder_pso(X_train, params, relu, optimizers{o}, num_epochs, num_particles, pso_params);
     string = sprintf("personal bests (first 5): %d, %d, %d, %d, %d", p_best_loss(1), p_best_loss(2), p_best_loss(3), p_best_loss(4), p_best_loss(5));
     disp(string)
     weights_log(o).optimizer = tmp_log.optimizer;
     weights_log(o).epoch = tmp_log.epoch;
-    loss_all(:, o) = loss_history;
+    all_loss(:, o) = loss_history;
 end
 
 
+% plot the loss curves
+figure;
+hold on;
+colors = lines(numel(optimizers));  % use distinguishable colors
+
+for o = 1:numel(optimizers)
+    plot(all_loss(:, o), '-', 'Color', colors(o,:), ...
+         'LineWidth', 1.5, 'DisplayName', optimizers{o});
+end
+
+xlabel('Epoch');
+ylabel('Average Batch Loss');
+title('Batch Loss for Different Optimizers over epochs');
+legend('Location', 'northeast');
+grid on;
+hold off;
+% Save as PNG
+saveas(gcf, 'training_loss_plot.png');
 

@@ -1,4 +1,4 @@
-function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_train, params, optim, relu, relu_deriv, optimizer_type, learning_rate, num_epochs, o)
+function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_train, params, optim, relu, relu_deriv, optimizer_type, learning_rate, num_epochs, o, regularization_lambda)
     %TRAIN_AUTOENCODER Trains a shallow autoencoder using the given optimizer and training data.
     %
     %   Trains an autoencoder on normalized input data using gradient-based updates.
@@ -32,7 +32,6 @@ function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_trai
     num_samples = size(X_train, 1); % samples in one batch
     progressBar = waitbar(0, 'Training...', 'WindowStyle', 'normal');
 
-    
     for epoch = 1:num_epochs
         msg = sprintf('Training with %s (Epoch %d/%d)', upper(optimizer_type), epoch, num_epochs);
         waitbar(epoch / num_epochs, progressBar, msg);
@@ -44,24 +43,25 @@ function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_trai
             x = X_train_shuffled(i, :);
             [loss, grads, ~] = forward_backward_pass(x, params, relu, relu_deriv); % the loss function, returns: gradients
             total_batch_loss = total_batch_loss + loss;
-            [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type,i);
+            [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type,i, regularization_lambda);
         end
         loss_history(epoch) = total_batch_loss / num_samples;
+        % Optional live plot
+        [x_test_sample, x_hat] = live_training_plot(X_train, params, epoch, relu); % takes the x_hat from last forward_backward_pass
 
         % Save only every 10th epoch
         if mod(epoch, 10) == 0
             snapshot = save_epoch_weights(params);
             snapshot.epoch = epoch;
+            snapshot.x_test_sample = x_test_sample;
+            snapshot.x_hat = x_hat;
             if isempty(weight_log.epoch)
                 weight_log.epoch = snapshot;  % first assignment defines struct fields
             else
                 weight_log.epoch(end+1) = snapshot;  % safe append
             end
         end
-        
-        % Optional live plot
-        live_training_plot(X_train, params, epoch, relu); % takes the x_hat from last forward_backward_pass
-        
     end
+    total_batch_loss = total_batch_loss / num_samples;
     close(progressBar);
 end

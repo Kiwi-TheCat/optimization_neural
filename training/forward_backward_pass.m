@@ -31,7 +31,12 @@ function [loss, grads, x_hat] = forward_backward_pass(x, params, relu, relu_deri
     % When deriving the gradient of 0.5 * (x_hat - x)^2, the 2 cancels out:
     %   d/dx [0.5 * (x - y)^2] = x - y
     loss = 0.5 * sum((x_hat - x).^2);  % scalar loss
-
+    
+    % === Forward-only mode ===
+    if isempty(relu_deriv)
+        grads = struct();  % No gradients needed
+        return;
+    end
     % === Backward Pass ===
     % Gradient of the loss with respect to output
     dL = x_hat - x;

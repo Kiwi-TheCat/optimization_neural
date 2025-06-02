@@ -1,4 +1,4 @@
-function live_training_plot(X_train, params, epoch, relu)
+function [x_test_sample,x_hat]  = live_training_plot(X_train, params, epoch, relu)
     figure(100); clf;
      
     % --- Test one encoding ---

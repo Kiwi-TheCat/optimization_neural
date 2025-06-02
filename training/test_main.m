@@ -8,25 +8,25 @@ X_train = X_train(1:384,:);
 input_size = size(X_train, 2);
 hidden_size = 200;
 latent_size = 200;
-num_epochs = 20;
-learning_rate = 0.0002;
+num_epochs = 200;
+learning_rate = 0.0002; % should be low for stochastic gradient descend
+regularization_lambda = 0; % determines L2 regularization lambda
+alpha_leaky = 0.1; % determines leakiness for leaky_relu
 optimizers = {'sgd', 'adagrad', 'adam'};
-%optimizers = {'adam'};
    
 % Store comparison results
 weights_log = struct(); % logs the weights every 10th epoch over all the training epochs
 all_loss = zeros(num_epochs, numel(optimizers));    % logs all the loss curves
 final_loss = zeros(1, numel(optimizers));           % logs all the losses over all the epochs
 x_train_log = cell(num_epochs, numel(optimizers));  % logs all the data that had been trained on
-x_test_log = cell(num_epochs, numel(optimizers));   % logs all data that has been tested on for validation
 
 for o = 1:numel(optimizers)
     optimizer_type = optimizers{o};
     fprintf('Training with %s optimizer...\n', optimizer_type);
 
-    [params, optim, relu, leaky_relu, relu_deriv, leaky_relu_deriv] = setup_network(input_size, hidden_size, latent_size); % leaky_relu with alpha=0.1
+    [params, optim, relu, leaky_relu, relu_deriv, leaky_relu_deriv] = setup_network(input_size, hidden_size, latent_size, alpha_leaky); 
 
-    [loss_history, tmp_log, final_loss(o)] = train_autoencoder(X_train, params, optim, relu, relu_deriv, optimizer_type, learning_rate, num_epochs, o); 
+    [loss_history, tmp_log, final_loss(o)] = train_autoencoder(X_train, params, optim, leaky_relu, leaky_relu_deriv, optimizer_type, learning_rate, num_epochs, o, regularization_lambda); 
     % replace relu with leaky_relu and relu_deriv with leaky_relu_deriv for comparison
     
     weights_log(o).optimizer = tmp_log.optimizer;
@@ -34,9 +34,8 @@ for o = 1:numel(optimizers)
     all_loss(:, o) = loss_history; % stores the batch-loss (summed losses over all N training samples)/N
 
 end
-save('loss_all_log_3.mat', 'all_loss', 'final_loss');
-save('weights_log_tensor_3.mat', 'weights_log', 'x_test_log');
-
+save('loss_all_log_leaky.mat', 'all_loss', 'final_loss');
+save('weights_log_tensor_leaky.mat', 'weights_log');
 
 % plot the loss curves
 figure;
