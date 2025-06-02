@@ -1,4 +1,5 @@
-function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_train, params, optim, relu, relu_deriv, optimizer_type, learning_rate, num_epochs, o, regularization_lambda)
+function [loss_history, weight_log, total_avg_loss] = train_autoencoder(X_train, params, optim, relu, relu_deriv,...
+    optimizer_type, learning_rate, num_epochs, o, regularization_lambda, batch_descend)
     %TRAIN_AUTOENCODER Trains a shallow autoencoder using the given optimizer and training data.
     %
     %   Trains an autoencoder on normalized input data using gradient-based updates.
@@ -35,18 +36,25 @@ function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_trai
     for epoch = 1:num_epochs
         msg = sprintf('Training with %s (Epoch %d/%d)', upper(optimizer_type), epoch, num_epochs);
         waitbar(epoch / num_epochs, progressBar, msg);
-        X_train_shuffled = X_train(randperm(num_samples), :);
         total_batch_loss = 0;
-
-        % --- Training loop ---
-        for i = 1:num_samples
-            x = X_train_shuffled(i, :);
-            [loss, grads, ~] = forward_backward_pass(x, params, relu, relu_deriv); % the loss function, returns: gradients
-            total_batch_loss = total_batch_loss + loss;
-            [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type,i, regularization_lambda);
+        % --- Training ---
+        if batch_descend
+            [total_avg_loss, grads, ~] = forward_backward_pass(X_train, params, relu, relu_deriv); % the loss function, returns: gradients
+            [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type, epoch, regularization_lambda);
+            loss_history(epoch) = total_avg_loss;
+        else
+            for i = 1:num_samples
+                rng(epoch);  % Set once for reproducibility
+                idx = randperm(num_samples);  % Will be the same every run
+                X_train_shuffled = X_train(idx, :);
+                x = X_train_shuffled(i, :);
+                [loss, grads, ~] = forward_backward_pass(x, params, relu, relu_deriv); % the loss function, returns: gradients
+                total_batch_loss = total_batch_loss + loss;
+                [params, optim] = update_params(params, grads, optim, learning_rate, optimizer_type,i, regularization_lambda);
+            end
+            loss_history(epoch) = total_batch_loss / num_samples;
         end
-        loss_history(epoch) = total_batch_loss / num_samples;
-        % Optional live plot
+        % Optional live plot 
         [x_test_sample, x_hat] = live_training_plot(X_train, params, epoch, relu); % takes the x_hat from last forward_backward_pass
 
         % Save only every 10th epoch
@@ -62,6 +70,8 @@ function [loss_history, weight_log, total_batch_loss] = train_autoencoder(X_trai
             end
         end
     end
-    total_batch_loss = total_batch_loss / num_samples;
+    if ~batch_descend
+        total_avg_loss = total_batch_loss / num_samples;
+    end
     close(progressBar);
 end

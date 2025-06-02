@@ -30,6 +30,9 @@ pso_params.w = 0.5; % momentum
 pso_params.c1 = 1.5; % cognitive
 pso_params.c2 = 0.3; % social
 num_particles = 30;
+pso_params.lambda_out = 1e-3; 
+pso_params.threshold = 3;
+pso_params.lambda_div = 1e-3;
 
 %% Store comparison results
 weights_log = struct();

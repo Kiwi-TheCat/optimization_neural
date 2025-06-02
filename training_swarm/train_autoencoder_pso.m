@@ -36,22 +36,13 @@ function [global_best_loss_history, weight_log, final_mse, p_best_particles_loss
         for i = 1:num_particles
             particle_vector = particles(i, :);
             params = unpack(particle_vector);
-            total_loss = 0;
 
-            for n = 1:size(X_train, 1)
-                x = X_train(n, :);
-                [loss, ~, ~] = forward_backward_pass(x, params, relu, []);  % forward only
-                total_loss = total_loss + loss;
-            end
-
-            avg_loss = total_loss / size(X_train, 1);
+            [total_avg_loss, ~, ~] = forward_backward_pass(X_train, params, relu, []); % the loss function, returns: gradients
 
             % === Regularization Terms ===
-            lambda_out = 1e-3; threshold = 3;
-            lambda_div = 1e-3;
-            reg_penalty = lambda_out * sum((abs(particle_vector) > threshold) .* (particle_vector.^2)) ...
-                        + lambda_div / (var(particle_vector) + 1e-6);
-            fitness = avg_loss + reg_penalty;
+            reg_penalty = pso_params.lambda_out * sum((abs(particle_vector) > pso_params.threshold) .* (particle_vector.^2)) ...
+                        + pso_params.lambda_div / (var(particle_vector) + 1e-6);
+            fitness = total_avg_loss + reg_penalty;
 
             % === Update Personal Best ===
             if fitness < p_best_particles_loss(i)
