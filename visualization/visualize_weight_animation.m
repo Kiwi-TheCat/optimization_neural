@@ -1,64 +1,67 @@
-function visualize_weight_animation(weights_log, x_test_log)
-    % VISUALIZE_WEIGHT_ANIMATION Animates decoder and encoder weight changes across epochs
+function visualize_weight_animation(weights_log, o, update_indices)
+    % VISUALIZE_WEIGHT_ANIMATION - Animates weight values at given indices across epochs.
+    % If update_indices is not given, selects all changed weights automatically.
 
-    % Create figure for animation
     f_overlay = figure(100);
     set(f_overlay, 'Name', 'Training Visualization', 'Position', [200, 200, 1800, 400]);
 
-    % Loop through each optimizer's training log
-    for o = 1:numel(weights_log)
-        optimizer_type = weights_log(o).optimizer;
-        num_epochs = numel(weights_log(o).epoch);
-        
-        for epoch = 1:num_epochs
-            % Dummy input and reconstruction for visualization
-            %x_test = rand(1, size(weights_log(o).epoch(epoch).We1, 1));
-            %x_hat = rand(1, size(weights_log(o).epoch(epoch).We1, 1));
-            x_hat = x_test_log{epoch, o}(2,:);
-            x_test = x_test_log{epoch, o}(1,:);
-            % Plot Input vs Reconstruction
-            subplot(1,3,1);
-            plot(x_test, 'b'); hold on;
-            plot(x_hat, 'r'); hold off;
-            title(sprintf('Input vs Reconstruction - %s - Epoch %d', upper(optimizer_type), epoch));
-            legend('Original', 'Reconstructed');
-            xlabel('Feature Index'); ylabel('Voltage'); axis tight;
+    optimizer_type = weights_log(o).optimizer;
+    num_epochs = numel(weights_log(o).epoch);
+    real_epochs = arrayfun(@(e) weights_log(o).epoch(e).epoch, 1:num_epochs);
 
-            % Plot Δ Decoder Weights
-            subplot(1,3,2);
-            if epoch > 1
-                delta_decoder = log10(abs(weights_log(o).epoch(epoch).Wd_output) + 1e-6) - ...
-                                 log10(abs(weights_log(o).epoch(epoch-1).Wd_output) + 1e-6);
-            else
-                delta_decoder = zeros(size(weights_log(o).epoch(epoch).Wd_output));
-            end
-            imagesc(delta_decoder); axis tight;
-            caxis([-0.2, 0.2]);
-            colorbar;
-            n = 128;
-            blue_to_black = [linspace(0,0,n)', linspace(0,0,n)', linspace(1,0,n)'];
-            black_to_green = [linspace(0,0,n)', linspace(0,1,n)', linspace(0,0,n)'];
-            custom_cmap = [blue_to_black; 0 0 0; black_to_green];
-            colormap(gca, custom_cmap);
-            title(sprintf('\x0394 Decoder Weights - %s - Epoch %d', upper(optimizer_type), epoch));
-            xlabel('Output Features'); ylabel('Decoder Hidden'); set(gca,'YDir','normal');
+    % === Determine update_indices if not provided ===
+    if nargin < 4 || isempty(update_indices)
+        origin = 'from changed weights';
 
-            % Plot Δ Encoder Weights
-            subplot(1,3,3);
-            if epoch > 1
-                delta_encoder = log10(abs(weights_log(o).epoch(epoch).We1) + 1e-6) - ...
-                                 log10(abs(weights_log(o).epoch(epoch-1).We1) + 1e-6);
-            else
-                delta_encoder = zeros(size(weights_log(o).epoch(epoch).We1));
-            end
-            imagesc(delta_encoder); axis tight;
-            caxis([-1, 1]);
-            colorbar;
-            colormap(gca, custom_cmap);
-            title(sprintf('\x0394 Encoder Weights - %s - Epoch %d', upper(optimizer_type), epoch));
-            xlabel('Hidden Units'); ylabel('Input Features'); set(gca,'YDir','normal');
+        We_ref = weights_log(o).epoch(1).We1(:);
+        changes = false(size(We_ref));
 
-            drawnow;
+        for epoch = 2:num_epochs
+            We_curr = weights_log(o).epoch(epoch).We1(:);
+            changes = changes | (We_curr ~= We_ref);
+            We_ref = We_curr;
         end
+        update_indices = find(changes);
+    else
+        origin = 'from given indices';
+    end
+
+    % === Collect weight traces over epochs ===
+    encoder_traces = zeros(length(update_indices), num_epochs);
+    decoder_traces = zeros(length(update_indices), num_epochs);
+
+    for epoch = 1:num_epochs
+        We_flat = weights_log(o).epoch(epoch).We1(:);
+        Wd_flat = weights_log(o).epoch(epoch).Wd_output(:);
+        encoder_traces(:, epoch) = We_flat(update_indices).^3;
+        decoder_traces(:, epoch) = Wd_flat(update_indices).^3;
+    end
+
+    % Set color limits
+    clim_enc = [min(encoder_traces(:)), max(encoder_traces(:))];
+    clim_dec = [min(decoder_traces(:)), max(decoder_traces(:))];
+
+    % === Animate ===
+    for epoch = 1:num_epochs
+        subplot(1, 3, 1);
+        plot(weights_log(o).epoch(epoch).x_test_sample, 'b'); hold on;
+        plot(weights_log(o).epoch(epoch).x_hat, 'r'); hold off;
+        title(sprintf('Input vs Reconstruction - %s - Epoch %d', upper(optimizer_type), real_epochs(epoch)));
+        legend('Original', 'Reconstructed');
+        xlabel('Feature Index'); ylabel('Voltage'); axis tight;
+
+        subplot(1, 3, 2);
+        imagesc(real_epochs(1:epoch), 1:length(update_indices), decoder_traces(:, 1:epoch));
+        caxis(clim_dec); colorbar;
+        ylabel('Decoder Weight Index'); xlabel('Epoch');
+        title(sprintf('Decoder Weights (%s) - %s - Epoch %d', origin, upper(optimizer_type), real_epochs(epoch)));
+
+        subplot(1, 3, 3);
+        imagesc(real_epochs(1:epoch), 1:length(update_indices), encoder_traces(:, 1:epoch));
+        caxis(clim_enc); colorbar;
+        ylabel('Encoder Weight Index'); xlabel('Epoch');
+        title(sprintf('Encoder Weights (%s) - %s - Epoch %d', origin, upper(optimizer_type), real_epochs(epoch)));
+
+        drawnow;
     end
 end

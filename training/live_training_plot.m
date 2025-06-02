@@ -1,21 +1,20 @@
-function live_training_plot(params, weight_log, X_train_original, mean_X, std_X, optimizer_type, epoch)
-%LIVE_TRAINING_PLOT Placeholder function to be implemented by user.
-%   This function should visualize training progress, weight changes, and reconstructions.
+function [x_test_sample,x_hat]  = live_training_plot(X_train, params, epoch, relu)
+    figure(100); clf;
+     
+    % --- Test one encoding ---
+    x_test_sample = X_train(1,:);
+    h1 = relu(x_test_sample * params.We1 + params.be1);
+    z = relu(h1 * params.We_latent + params.be_latent);
 
-% Example: plot input vs. reconstruction
-x_test = X_train_original(1, :);
-x_norm = (x_test - mean_X) ./ std_X;
-relu = @(x) max(0, x);
-h1 = relu(x_norm * params.We1 + params.be1);
-z = relu(h1 * params.We_latent + params.be_latent);
-h2 = relu(z * params.Wd1 + params.bd1);
-x_hat = h2 * params.Wd_output + params.bd_output;
-x_hat = x_hat .* std_X + mean_X;
+    % --- Final decoding for visualization ---
+    h2 = relu(z * params.Wd1 + params.bd1);
+    x_hat = h2 * params.Wd_output + params.bd_output;
+    
+    h1 = plot(x_test_sample, 'b'); hold on;
+    h2 = plot(x_hat, 'r'); hold off;
 
-figure(100); clf;
-plot(x_test, 'b'); hold on;
-plot(x_hat, 'r'); hold off;
-title(sprintf('Epoch %d: Original vs. Reconstructed', epoch));
-xlabel('Feature'); ylabel('Voltage');
-legend('Original', 'Reconstructed');
+    legend([h1, h2], {'Original', 'Reconstructed'});
+    xlabel('Feature'); ylabel('Voltage');
+    title(sprintf('Epoch %d: Original vs. Reconstructed', epoch));
+    drawnow;
 end
