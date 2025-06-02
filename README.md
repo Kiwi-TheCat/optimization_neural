@@ -9,6 +9,12 @@
 3. After adding noise to the weight matrix, continue training, then compare the new converged loss with the initial loss without noise corruption, to find out the resilience of different layers
 - ```train_with_noise2.m```
 4. Implementation of Swarm Algorithm
-
-
-## Problem overview
+- ```main_PSO.m```
+5. standardised preprocessing -> delta encoding and Z-score normalisation on data_1s
+- ```preprocessing_data.m``` (which includes SGD, AdaGrad, ADAM)  
+6. Implementation of regularization, fixing the weights during training,  leaky-relu activation or relu, adjustment lr, batch_descend or sample descend (updating after a batch or after a sample)
+- ```main_training.m``` (which includes SGD, AdaGrad, ADAM)
+7. visualization of weight matrix coefficient changes in a heatmap
+- ```plot_history_and_visualization.m``` (which includes SGD, AdaGrad, ADAM)
+8. validation stored networks on the 20 test split from 20/80 test/train
+- ```plot_validation_mse.m``` 
